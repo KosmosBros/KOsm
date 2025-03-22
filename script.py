@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 TITLE, DESCRIPTION, PRICE, CONTACT, PHOTO, CONFIRMATION, RESTART = range(7)
 
 
-# Стартовая команда для бота
+# Стартовая команда для б
 async def start(update: Update, context: CallbackContext):
     # Очистить все данные пользователя, чтобы сбросить процесс
     context.user_data.clear()
