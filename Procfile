@@ -1,1 +1,1 @@
-web: ls -la /app/ && python bot.py
+web: python bot.py
