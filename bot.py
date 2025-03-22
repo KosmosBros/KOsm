@@ -1,12 +1,10 @@
-import os
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
-from flask import Flask, request
 
-# Ваш токен бота
-TOKEN = "7203941606:AAFxdSd7TZsTPNV2uSu_sjFjoqAfHStEAlU"
-CHANNEL_ID = "@satislegends"  # или числовой ID
+# Вставьте ваш токен API
+TOKEN = 'YOUR_BOT_API_TOKEN'
+CHANNEL_ID = '@your_channel_name'  # Укажите ID вашего канала
 
 # Включаем логирование для отслеживания ошибок
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -16,12 +14,11 @@ logger = logging.getLogger(__name__)
 # Этапы разговора
 TITLE, DESCRIPTION, PRICE, CONTACT, PHOTO, CONFIRMATION, RESTART = range(7)
 
-# Flask приложение для обработки webhook запросов
-app = Flask(__name__)
-
-# Стартовая команд
+# Стартовая команда для бота
 async def start(update: Update, context: CallbackContext):
+    # Очистить все данные пользователя, чтобы сбросить процесс
     context.user_data.clear()
+    
     await update.message.reply_text('Merhaba! Size bir ilan yayınlamanızda yardımcı olacağım. '
                                     'Lütfen ürünün adını gönderin.')
     return TITLE
@@ -55,11 +52,12 @@ async def get_photo(update: Update, context: CallbackContext):
     context.user_data['photo'] = update.message.photo[-1].file_id
     await update.message.reply_text('Harika! İlanınız yayınlamaya hazır. '
                                     'Lütfen onaylayın.')
+    # Отправка данных для подтверждения
     await update.message.reply_text('İşte ürününüz:\n'
-                                    f"📦 {context.user_data['title']}\n"
-                                    f"📝 {context.user_data['description']}\n"
-                                    f"💰 {context.user_data['price']}\n"
-                                    f"📞 {context.user_data['contact']}")
+                                    f"📦 *Ad:* {context.user_data['title']}\n"
+                                    f"📝 *Açıklama:* {context.user_data['description']}\n"
+                                    f"💰 *Fiyat:* {context.user_data['price']}\n"
+                                    f"📞 *İletişim:* {context.user_data['contact']}")
     await update.message.reply_text('İlanınızı göndermeyi onaylıyor musunuz? "Evet" yazın, her şey doğruysa, '
                                     'ya da "Hayır" yazın, değişiklik yapmak için.')
     return CONFIRMATION
@@ -67,14 +65,16 @@ async def get_photo(update: Update, context: CallbackContext):
 # Подтверждение отправки объявления
 async def confirm_ad(update: Update, context: CallbackContext):
     user_response = update.message.text.lower()
-
+    
     if user_response == 'evet':
+        # Отправка объявления и фото в канал одновременно
         text = f"📦 Yeni ürün:\n" \
-               f"{context.user_data['title']}\n" \
-               f"📝 {context.user_data['description']}\n" \
-               f"💰 {context.user_data['price']}\n" \
-               f"📞 {context.user_data['contact']}"
-
+               f"Ad: {context.user_data['title']}\n" \
+               f"📝 Açıklama: {context.user_data['description']}\n" \
+               f"💰 Fiyat: {context.user_data['price']}\n" \
+               f"📞 İletişim: {context.user_data['contact']}"
+        
+        # Отправляем текст и фото в канал
         if 'photo' in context.user_data:
             await context.bot.send_photo(CHANNEL_ID, context.user_data['photo'], caption=text)
         else:
@@ -82,15 +82,18 @@ async def confirm_ad(update: Update, context: CallbackContext):
 
         await update.message.reply_text('İlanınız başarıyla kanala gönderildi!')
 
-        await update.message.reply_text(
-            'Başka bir ilan vermek ister misiniz? "Evet" yazın, devam etmek için veya "Hayır" yazın, bitirmek için.')
+        # Spрашиваем, хочет ли пользователь разместить еще одно объявление
+        await update.message.reply_text('Başka bir ilan vermek ister misiniz? "Evet" yazın, devam etmek için veya "Hayır" yazın, bitirmek için.')
         return RESTART
 
     elif user_response == 'hayır':
+        # Возвращаем пользователя к нужному этапу
         await update.message.reply_text('Tamam! Başka bir ilan vermek için lütfen ürünün adını gönderin.')
         return TITLE
     else:
+        # Если ответ не "Evet" или "Hayır", просим повторить
         await update.message.reply_text('Lütfen "Evet" yazın, her şey doğruysa veya "Hayır" yazın, değişiklik yapmak için.')
+    
     return CONFIRMATION
 
 # Спросить пользователя, если он хочет опубликовать еще одно объявление
@@ -98,17 +101,20 @@ async def ask_restart(update: Update, context: CallbackContext):
     user_response = update.message.text.lower()
 
     if user_response == 'evet':
+        # Очистить все данные пользователя, чтобы сбросить процесс
         context.user_data.clear()
         await update.message.reply_text('Tamam, ürünün adını gönderin lütfen.')
         return TITLE
 
     elif user_response == 'hayır':
+        # Завершаем сессию
         await update.message.reply_text('Botu kullandığınız için teşekkürler! Hoşça kalın!')
         return ConversationHandler.END
 
     else:
+        # Если ответ не "Evet" или "Hayır", просим повторить
         await update.message.reply_text('Lütfen "Evet" yazın, devam etmek için veya "Hayır" yazın, bitirmek için.')
-
+    
     return RESTART
 
 # Обработчик ошибок
@@ -120,17 +126,8 @@ async def cancel(update: Update, context: CallbackContext):
     await update.message.reply_text('İlan iptal edildi. Başlamak için /start yazın.')
     return ConversationHandler.END
 
-# Flask endpoint для webhook
-@app.route(f'/{TOKEN}', methods=['POST'])
-def webhook():
-    json_str = request.get_data(as_text=True)
-    update = Update.de_json(json_str, application.bot)
-    application.process_update(update)
-    return 'OK'
-
 def main():
     # Создаем объект Application
-    global application
     application = Application.builder().token(TOKEN).build()
 
     # Обработчики разговоров
@@ -143,20 +140,19 @@ def main():
             CONTACT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_contact)],
             PHOTO: [MessageHandler(filters.PHOTO, get_photo)],
             CONFIRMATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_ad)],
-            RESTART: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_restart)],
+            RESTART: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_restart)],  # Новая стадия для перезапуска
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
 
+    # Добавляем ConversationHandler в приложение
     application.add_handler(conversation_handler)
 
     # Обработка ошибок
     application.add_error_handler(error)
 
-await application.bot.set_webhook(url=f'https://kosmosbros.com/{TOKEN}')
-
-    # Запускаем Flask для обработки входящих запросов
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    # Запускаем бота
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
