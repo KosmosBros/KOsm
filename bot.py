@@ -153,8 +153,7 @@ def main():
     # Обработка ошибок
     application.add_error_handler(error)
 
-    # Устанавливаем webhook
-    application.bot.set_webhook(url=f'https:/kosmosbros.com/{TOKEN}')
+await application.bot.set_webhook(url=f'https://kosmosbros.com/{TOKEN}')
 
     # Запускаем Flask для обработки входящих запросов
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
